@@ -22,8 +22,7 @@ namespace web_app_performance.Controllers
             await db.KeyExpireAsync(key, TimeSpan.FromSeconds(10));
             string user = await db.StringGetAsync(key);
 
-
-            if (!string.IsNullOrEmpty(key))
+            if (!string.IsNullOrEmpty(user))
             {
                 return Ok(user);
             }
@@ -38,6 +37,7 @@ namespace web_app_performance.Controllers
 
             return Ok(usuarios);
         }
+
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] Usuario usuario)
         {
@@ -45,11 +45,56 @@ namespace web_app_performance.Controllers
             using var connection = new MySqlConnection(connectionString);
             await connection.OpenAsync();
 
-            string sql = "insert into usuarios(nome, email) values(@nome, @email);";
+            string sql = @"insert into usuarios(nome, email) 
+                            values(@nome, @email);";
             await connection.ExecuteAsync(sql, usuario);
 
-            //apagar o cache
+            //apagar o cachê
             string key = "getusuario";
+            redis = ConnectionMultiplexer.Connect("localhost:6379");
+            IDatabase db = redis.GetDatabase();
+            await db.KeyDeleteAsync(key);
+
+            return Ok();
+        }
+
+        [HttpPut]
+        public async Task<IActionResult> Put([FromBody] Usuario usuario)
+        {
+            string connectionString = "Server=localhost;Database=sys;User=root;Password=123;";
+            using var connection = new MySqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            string sql = @"update usuarios 
+                            set Nome = @nome, 
+	                            Email = @email
+                            where Id = @id;";
+
+            await connection.ExecuteAsync(sql, usuario);
+
+            //apagar o cachê
+            string key = "getusuario";
+            redis = ConnectionMultiplexer.Connect("localhost:6379");
+            IDatabase db = redis.GetDatabase();
+            await db.KeyDeleteAsync(key);
+
+            return Ok();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            string connectionString = "Server=localhost;Database=sys;User=root;Password=123;";
+            using var connection = new MySqlConnection(connectionString);
+            await connection.OpenAsync();
+
+            string sql = @"delete from usuarios where Id = @id;";
+
+            await connection.ExecuteAsync(sql, new { id });
+
+            //apagar o cachê
+            string key = "getusuario";
+            redis = ConnectionMultiplexer.Connect("localhost:6379");
             IDatabase db = redis.GetDatabase();
             await db.KeyDeleteAsync(key);
 
