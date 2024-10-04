@@ -1,6 +1,6 @@
 namespace web_app_performance.Model
 {
-    public class Usuario
+    public class Produto
     {
         public int Id { get; set; }
         public string Nome { get; set; }
